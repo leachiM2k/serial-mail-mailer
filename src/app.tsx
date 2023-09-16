@@ -1,5 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import App from "./frontend/App";
+
 
 const root = createRoot(document.getElementById("root"));
-root.render(<h2>Hello</h2>);
+root.render(<App />);
