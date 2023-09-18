@@ -47,6 +47,9 @@ const Confirmation: React.FC<Props> = (props) => {
                 }
             });
 
+            // sleep for 1 second
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
             if(success) {
                 console.log('Message to ' + to + ' sent successfully!');
             } else {
