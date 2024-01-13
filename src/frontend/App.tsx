@@ -25,6 +25,7 @@ const steps = [
     },
     {
         title: 'Confirmation & Send',
+        isDisabled: (allValues: any) => !allValues.settings || !allValues.attachments || !allValues.content || !allValues.recipients,
     }
 ];
 const App = () => {
@@ -39,7 +40,12 @@ const App = () => {
         setCurrent(current - 1);
     };
 
-    const items = steps.map((item) => ({ key: item.title, title: item.title }));
+    const items = steps
+        .map((item) => ({
+            key: item.title,
+            title: item.title,
+            disabled: item.isDisabled ? item.isDisabled(allValues) : false,
+        }));
 
     const contentStyle: React.CSSProperties = {
         marginTop: 16,
@@ -55,10 +61,11 @@ const App = () => {
             recipients={allValues.recipients}
             subject={allValues.content?.subject}
             body={allValues.content?.body}
+            htmlBody={allValues.content?.htmlBody}
             attachments={allValues.attachments}
             settings={allValues.settings}
         />);
-        return <C onFinished={(values) => {
+        return <C {...allValues} onFinished={(values) => {
             setAllValues({...allValues, ...values});
             next();
         }}/>;

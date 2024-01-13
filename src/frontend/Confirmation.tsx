@@ -7,8 +7,17 @@ type Props = {
     recipients: RecipientType[];
     subject: string;
     body: string;
+    htmlBody: string;
     attachments: string[];
     settings: SettingsType;
+}
+
+const replaceTemplateStrings = (text: string, variables: { [key: string]: string }) => {
+    let newText = text;
+    for (const key in variables) {
+        newText = newText.replace(new RegExp(`##${key}##`, 'g'), variables[key]);
+    }
+    return newText;
 }
 
 const Confirmation: React.FC<Props> = (props) => {
@@ -31,7 +40,7 @@ const Confirmation: React.FC<Props> = (props) => {
                 subject: props.subject,
 
                 // plaintext body
-                text: props.body.replace(/##firstname##/g, recipient.firstname),
+                text: replaceTemplateStrings(props.body, recipient),
 
                 attachments: (props.attachments || []).map((attachment) => ({
                     filename: attachment.split('/').pop(),
@@ -50,7 +59,7 @@ const Confirmation: React.FC<Props> = (props) => {
             // sleep for 1 second
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            if(success) {
+            if (success) {
                 console.log('Message to ' + to + ' sent successfully!');
             } else {
                 console.error('Message to ' + to + ' failed!');
@@ -67,11 +76,11 @@ const Confirmation: React.FC<Props> = (props) => {
     }
 
     const renderSending = () => {
-        if(!sending) return null;
+        if (!sending) return null;
         return (
             <>
                 <Typography.Text type="secondary">Sending...</Typography.Text>
-                <Progress percent={sentCount / props.recipients.length * 100} status="active" />
+                <Progress percent={sentCount / props.recipients.length * 100} status="active"/>
             </>
         );
     }
@@ -83,8 +92,17 @@ const Confirmation: React.FC<Props> = (props) => {
             <Typography.Paragraph><strong>Subject:</strong> {props.subject}</Typography.Paragraph>
             <Typography.Paragraph><strong>Attachments:</strong> {props.attachments.length}</Typography.Paragraph>
 
+            <Typography.Paragraph><strong>Example mail:</strong></Typography.Paragraph>
+
+            <iframe srcDoc={replaceTemplateStrings(props.htmlBody, props.recipients[0])} style={{
+                width: '100%',
+                height: 400,
+                border: "1px solid black"
+            }} />
+
             {renderSending()}
-            {sentCount === props.recipients.length && <Result status="success" title={`All ${sentCount} mails were sent successfully.`} />}
+            {sentCount === props.recipients.length &&
+                <Result status="success" title={`All ${sentCount} mails were sent successfully.`}/>}
             <Popconfirm
                 title="Start sending?"
                 description="Are you sure you want to start sending?"

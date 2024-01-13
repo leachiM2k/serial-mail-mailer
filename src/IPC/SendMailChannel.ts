@@ -16,26 +16,39 @@ export class SendMailChannel implements IpcChannelInterface {
 
         const settings = request.params.settings as SettingsType;
 
-        const transporter = nodemailer.createTransport({
-            host: settings.smtpServer,
-            port: parseInt(settings.smtpPort),
-            tls: {
-                ciphers: 'SSLv3',
-                rejectUnauthorized: false
-            },
-            debug: true,
-            logger: true,
-            auth: {
-                user: settings.smtpUser,
-                pass: settings.smtpPassword
-            }
-        });
+        const transporter = this.buildTransporter(settings.transport, settings);
 
         transporter.sendMail(request.params.message, (error, info) => {
             transporter.close();
             console.log('***** [SendMailChannel:37] ********************** ', {error, info});
             event.sender.send(request.responseChannel, {success: !error});
         });
+    }
 
+    private buildTransporter(transport: "smtp" | "gmail", settings: SettingsType) {
+        if (transport === "smtp") {
+            return nodemailer.createTransport({
+                host: settings.smtpServer,
+                port: parseInt(settings.smtpPort),
+                tls: {
+                    ciphers: 'SSLv3',
+                    rejectUnauthorized: false
+                },
+                debug: true,
+                logger: true,
+                auth: {
+                    user: settings.smtpUser,
+                    pass: settings.smtpPassword
+                }
+            });
+        } else if (transport === "gmail") {
+            return nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: settings.gmailUser,
+                    pass: settings.gmailPassword
+                }
+            });
+        }
     }
 }
