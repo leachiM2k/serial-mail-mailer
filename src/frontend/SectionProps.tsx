@@ -1,3 +1,5 @@
+import { ValuesProps } from "./ValuesProps";
+
 export type Props = {
-    onFinished: (values?: any) => void;
+    onFinished: (values?: ValuesProps) => void;
 };

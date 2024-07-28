@@ -2,14 +2,14 @@ import { Button, Popconfirm, Progress, Result, Typography } from "antd";
 import React, { useState } from "react";
 import { RecipientType } from "./Recipients";
 import { SettingsType } from "./Settings";
+import { AttachmentIndividualType, AttachmentSharedType, ContentType, isAttachmentShared } from "./ValuesProps";
+import { MailMessageType } from "../shared/MailMessageType";
 
 type Props = {
-    recipients: RecipientType[];
-    subject: string;
-    body: string;
-    htmlBody: string;
-    attachments: string[];
-    settings: SettingsType;
+    recipients: RecipientType[],
+    attachments: AttachmentSharedType | AttachmentIndividualType,
+    settings: SettingsType,
+    content?: ContentType
 }
 
 const replaceTemplateStrings = (text: string, variables: { [key: string]: string }) => {
@@ -25,6 +25,21 @@ const Confirmation: React.FC<Props> = (props) => {
     const [sending, setSending] = useState(false);
     const [sentCount, setSentCount] = useState(0);
 
+    const buildAttachments = (attachments: AttachmentSharedType | AttachmentIndividualType, recipient: RecipientType) => {
+        if (!attachments) {
+            return [];
+        }
+
+        const attachmentPaths = isAttachmentShared(attachments) ?
+            attachments.paths :
+            recipient[attachments.fieldname].split(',');
+
+        return attachmentPaths.map((path) => ({
+            filename: path.split('/').pop(),
+            path
+        }));
+    }
+
     const handleSendClick = async () => {
         setSending(true);
         setSentCount(0);
@@ -32,20 +47,19 @@ const Confirmation: React.FC<Props> = (props) => {
         const sendMail = async (recipient: RecipientType) => {
             const from = `${props.settings.senderName} <${props.settings.senderAddress}>`;
             const to = `${recipient.firstname} ${recipient.lastname} <${recipient.email}>`;
-            const message = {
+
+            const message: MailMessageType = {
                 from,
                 to,
 
                 // Subject of the message
-                subject: props.subject,
+                subject: props.content.subject,
 
                 // plaintext body
-                text: replaceTemplateStrings(props.body, recipient),
+                text: replaceTemplateStrings(props.content.body, recipient),
+                html: replaceTemplateStrings(props.content.htmlBody, recipient),
 
-                attachments: (props.attachments || []).map((attachment) => ({
-                    filename: attachment.split('/').pop(),
-                    path: attachment
-                })),
+                attachments: buildAttachments(props.attachments, recipient),
 
             };
 
@@ -89,16 +103,23 @@ const Confirmation: React.FC<Props> = (props) => {
         <>
             <Typography.Title level={2}>Overview</Typography.Title>
             <Typography.Paragraph><strong>Recipients:</strong> {props.recipients.length}</Typography.Paragraph>
-            <Typography.Paragraph><strong>Subject:</strong> {props.subject}</Typography.Paragraph>
-            <Typography.Paragraph><strong>Attachments:</strong> {props.attachments.length}</Typography.Paragraph>
+            <Typography.Paragraph><strong>Subject:</strong> {props.content.subject}</Typography.Paragraph>
+
+            {isAttachmentShared(props.attachments) ?
+                <Typography.Paragraph><strong>Shared attachments:</strong> {props.attachments.paths.length}
+                </Typography.Paragraph>
+                :
+                <Typography.Paragraph><strong>Individual attachment field name:</strong> {props.attachments.fieldname}
+                </Typography.Paragraph>
+            }
 
             <Typography.Paragraph><strong>Example mail:</strong></Typography.Paragraph>
 
-            <iframe srcDoc={replaceTemplateStrings(props.htmlBody, props.recipients[0])} style={{
+            <iframe srcDoc={replaceTemplateStrings(props.content.htmlBody, props.recipients[0])} style={{
                 width: '100%',
                 height: 400,
                 border: "1px solid black"
-            }} />
+            }}/>
 
             {renderSending()}
             {sentCount === props.recipients.length &&

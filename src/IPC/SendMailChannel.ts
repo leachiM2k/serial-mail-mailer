@@ -3,6 +3,7 @@ import { IpcMainEvent } from 'electron';
 import { IpcRequest } from "../shared/IpcRequest";
 import nodemailer from "nodemailer";
 import { SettingsType } from "../frontend/Settings";
+import { MailMessageType } from "../shared/MailMessageType";
 
 export class SendMailChannel implements IpcChannelInterface {
     getName(): string {
@@ -15,10 +16,11 @@ export class SendMailChannel implements IpcChannelInterface {
         }
 
         const settings = request.params.settings as SettingsType;
+        const message = request.params.message as MailMessageType;
 
         const transporter = this.buildTransporter(settings.transport, settings);
 
-        transporter.sendMail(request.params.message, (error, info) => {
+        transporter.sendMail(message, (error, info) => {
             transporter.close();
             console.log('***** [SendMailChannel:37] ********************** ', {error, info});
             event.sender.send(request.responseChannel, {success: !error});

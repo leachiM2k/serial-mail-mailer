@@ -5,6 +5,7 @@ import Content from "./Content";
 import Settings from "./Settings";
 import Attachments from "./Attachments";
 import Confirmation from "./Confirmation";
+import { ValuesProps } from "./ValuesProps";
 
 const steps = [
     {
@@ -29,7 +30,7 @@ const steps = [
     }
 ];
 const App = () => {
-    const [allValues, setAllValues] = useState({} as any);
+    const [allValues, setAllValues] = useState<ValuesProps>({});
     const [current, setCurrent] = useState(0);
 
     const next = () => {
@@ -59,9 +60,7 @@ const App = () => {
         const C = steps[current].content;
         if(!C) return (<Confirmation
             recipients={allValues.recipients}
-            subject={allValues.content?.subject}
-            body={allValues.content?.body}
-            htmlBody={allValues.content?.htmlBody}
+            content={allValues.content}
             attachments={allValues.attachments}
             settings={allValues.settings}
         />);
