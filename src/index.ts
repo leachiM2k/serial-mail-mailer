@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-import nodemailer from "nodemailer";
 import { IpcChannelInterface } from "./IPC/IpcChannelInterface";
 import { SystemInfoChannel } from "./IPC/SystemInfoChannel";
 import { SendMailChannel } from "./IPC/SendMailChannel";
@@ -23,6 +22,7 @@ const createWindow = (): void => {
         webPreferences: {
             preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
         },
+        icon: './images/icon.png',
     });
 
     // and load the index.html of the app.

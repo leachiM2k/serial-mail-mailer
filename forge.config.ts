@@ -9,18 +9,29 @@ import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import * as path from "node:path";
 
 const config: ForgeConfig = {
     packagerConfig: {
         asar: true,
+        icon: './images/icon',
     },
     rebuildConfig: {},
     makers: [
-        new MakerSquirrel({}),
+        new MakerSquirrel({
+            setupIcon: './images/icon.ico',
+        }),
         new MakerZIP({}, ['darwin']),
-        new MakerDMG({}),
+        new MakerDMG({
+            icon: path.join(process.cwd(), '/images/icon.icns'),
+        }),
         new MakerRpm({}),
-        new MakerDeb({})],
+        new MakerDeb({
+            options: {
+                maintainer: 'Michael Rotmanov',
+                icon: './images/icon.png',
+            }
+        })],
     plugins: [
         new AutoUnpackNativesPlugin({}),
         new WebpackPlugin({
