@@ -1,4 +1,4 @@
-import { Button, Checkbox, InputNumber, List, Popconfirm, Progress, Result, Slider, Table, Tag, Typography } from "antd";
+import { Button, Card, Checkbox, Col, InputNumber, List, Popconfirm, Progress, Result, Row, Slider, Statistic, Table, Tag, Typography } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import Papa from "papaparse";
 import React, { useRef, useState } from "react";
@@ -13,7 +13,10 @@ type Props = {
     recipients?: RecipientType[],
     attachments: AttachmentSharedType | AttachmentIndividualType | AttachmentNoneType,
     settings: SettingsType,
-    content: ContentType
+    content: ContentType,
+    onSendingChange?: (sending: boolean) => void;
+    onPrevious?: () => void;
+    prevIcon?: React.ReactNode;
 }
 
 const extractFilename = (path: string): string => {
@@ -74,6 +77,7 @@ const Confirmation: React.FC<Props> = (props) => {
         setDone(false);
         setCancelled(false);
         cancelRef.current = false;
+        props.onSendingChange?.(true);
 
         const initialStatuses: RecipientStatus[] = recipients.map(recipient => ({
             recipient,
@@ -133,6 +137,7 @@ const Confirmation: React.FC<Props> = (props) => {
 
         setSending(false);
         setDone(true);
+        props.onSendingChange?.(false);
     }
 
     const handleCancel = () => {
@@ -180,14 +185,14 @@ const Confirmation: React.FC<Props> = (props) => {
         const skippedCount = statuses.filter(s => s.status === 'skipped').length;
 
         if (dryRun) {
-            return <Result status="info" title={`Dry run complete — ${sentCount} mails would have been sent.`}/>;
+            return <Result status="info" title={`Dry run complete - ${sentCount} mails would have been sent.`}/>;
         }
 
         if (cancelled) {
             return (
                 <Result
                     status="warning"
-                    title={`Sending cancelled — ${successCount} sent, ${skippedCount} skipped`}
+                    title={`Sending cancelled - ${successCount} sent, ${skippedCount} skipped`}
                 />
             );
         }
@@ -281,28 +286,49 @@ const Confirmation: React.FC<Props> = (props) => {
 
     return (
         <>
-            <Typography.Title level={2}>Overview</Typography.Title>
-            <Typography.Paragraph><strong>Recipients:</strong> {recipients.length}</Typography.Paragraph>
-            <Typography.Paragraph><strong>Subject:</strong> {props.content.subject}</Typography.Paragraph>
+            <Typography.Title level={4} className="app-section-title">Overview</Typography.Title>
 
-            {isAttachmentShared(props.attachments) ?
-                <Typography.Paragraph><strong>Shared attachments:</strong> {props.attachments.paths.length}
+            <Row gutter={[16, 16]}>
+                <Col xs={24} sm={8}>
+                    <Card variant="borderless" className="app-stat-card">
+                        <Statistic title="Recipients" value={recipients.length}/>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                    <Card variant="borderless" className="app-stat-card">
+                        <Statistic
+                            title="Attachments"
+                            value={isAttachmentShared(props.attachments) ? props.attachments.paths.length
+                                : isAttachmentNone(props.attachments) ? 'None'
+                                : 'Per recipient'}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                    <Card variant="borderless" className="app-stat-card">
+                        <Statistic title="Sender" value={props.settings.senderAddress}/>
+                    </Card>
+                </Col>
+            </Row>
+
+            <Typography.Paragraph style={{ marginTop: 16 }}>
+                <strong>Subject:</strong> {props.content.subject || <Typography.Text type="secondary">(no subject)</Typography.Text>}
+            </Typography.Paragraph>
+
+            {!isAttachmentNone(props.attachments) && !isAttachmentShared(props.attachments) && (
+                <Typography.Paragraph type="secondary">
+                    <strong>Individual attachment field:</strong> {props.attachments.fieldname}
                 </Typography.Paragraph>
-                : isAttachmentNone(props.attachments) ?
-                    <Typography.Paragraph><strong>Attachments:</strong> None</Typography.Paragraph>
-                    :
-                    <Typography.Paragraph><strong>Individual attachment field name:</strong> {props.attachments.fieldname}
-                    </Typography.Paragraph>
-            }
+            )}
 
             {hasRecipients && (
                 <>
-                    <Typography.Paragraph><strong>Preview mail:</strong></Typography.Paragraph>
+                    <Typography.Title level={5} style={{ marginTop: 20 }}>Preview mail</Typography.Title>
 
                     <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ width: '30%' }}>
                             <Typography.Text>
-                                {previewIndex + 1} / {recipients.length} — {recipients[previewIndex].firstname} {recipients[previewIndex].lastname} &lt;{recipients[previewIndex].email}&gt;
+                                {previewIndex + 1} / {recipients.length} - {recipients[previewIndex].firstname} {recipients[previewIndex].lastname} &lt;{recipients[previewIndex].email}&gt;
                             </Typography.Text>
                         </div>
                         <div style={{ width: '70%', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -330,8 +356,9 @@ const Confirmation: React.FC<Props> = (props) => {
                     <iframe srcDoc={replaceTemplateStrings(props.content.htmlBody, recipients[previewIndex])} style={{
                         width: '100%',
                         height: 400,
-                        border: "1px solid #d9d9d9",
-                        borderRadius: 6,
+                        border: "1px solid var(--app-border)",
+                        borderRadius: 12,
+                        background: '#fff',
                     }}/>
                 </>
             )}
@@ -363,6 +390,9 @@ const Confirmation: React.FC<Props> = (props) => {
             {renderStatusTable()}
 
             <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                {!sending && !done && props.onPrevious && (
+                    <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>
+                )}
                 {!sending && !done && (
                     <Popconfirm
                         title="Start sending?"

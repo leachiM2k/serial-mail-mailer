@@ -1,4 +1,4 @@
-import { Button, Form, Input, Radio, Typography } from "antd";
+import { Button, Divider, Form, Input, Radio, Typography } from "antd";
 import React from "react";
 import { Props } from "./SectionProps";
 
@@ -52,59 +52,65 @@ const Settings: React.FC<Props> = (props: Props) => {
 
     return (
         <>
-            <Typography.Title level={2}>Settings</Typography.Title>
+            <Typography.Title level={4} className="app-section-title">Settings</Typography.Title>
 
             <Form form={settingsForm} name="settings"
-                  labelCol={{span: 8}}
-                  wrapperCol={{span: 16}}
+                  layout="vertical"
                   onChange={() => {
                       setTransport(settingsForm.getFieldValue('transport'));
                   }}
                   onFinish={handleFinishSettings}
                   initialValues={initialValues}
+                  style={{ maxWidth: 640 }}
             >
                 <Form.Item label="Transport" name="transport">
-                    <Radio.Group>
+                    <Radio.Group buttonStyle="solid">
                         <Radio.Button value="smtp">SMTP</Radio.Button>
                         <Radio.Button value="gmail">Google Mail / GMail</Radio.Button>
                     </Radio.Group>
                 </Form.Item>
 
-                <Form.Item label="Sendername" name="senderName">
-                    <Input/>
+                <Divider titlePlacement="left" plain>Sender</Divider>
+
+                <Form.Item label="Sender name" name="senderName">
+                    <Input placeholder="John Doe"/>
                 </Form.Item>
                 <Form.Item label="Sender e-mail address" name="senderAddress">
-                    <Input/>
+                    <Input placeholder="john@example.com"/>
                 </Form.Item>
 
                 {transport === 'gmail' && (
                     <>
-                        <Form.Item label="GMail User" name="gmailUser">
-                            <Input/>
+                        <Divider titlePlacement="left" plain>GMail credentials</Divider>
+                        <Form.Item label="GMail user" name="gmailUser">
+                            <Input placeholder="you@gmail.com"/>
                         </Form.Item>
-                        <Form.Item label="App specific password" name="gmailPassword">
-                            <Input type="password"/>
+                        <Form.Item label="App-specific password" name="gmailPassword"
+                                   tooltip="Use a Google app password, not your regular account password.">
+                            <Input.Password placeholder="••••••••"/>
                         </Form.Item>
                     </>)}
 
                 {transport === 'smtp' && (
                     <>
-                        <Form.Item label="SMTP Server" name="smtpServer">
-                            <Input/>
+                        <Divider titlePlacement="left" plain>SMTP connection</Divider>
+                        <Form.Item label="SMTP server" name="smtpServer">
+                            <Input placeholder="smtp.example.com"/>
                         </Form.Item>
-                        <Form.Item label="SMTP Port" name="smtpPort">
-                            <Input/>
+                        <Form.Item label="SMTP port" name="smtpPort">
+                            <Input placeholder="587"/>
                         </Form.Item>
-                        <Form.Item label="SMTP User" name="smtpUser">
-                            <Input/>
+                        <Form.Item label="SMTP user" name="smtpUser">
+                            <Input placeholder="username"/>
                         </Form.Item>
-                        <Form.Item label="SMTP Password" name="smtpPassword">
-                            <Input type="password"/>
+                        <Form.Item label="SMTP password" name="smtpPassword">
+                            <Input.Password placeholder="••••••••"/>
                         </Form.Item>
                     </>)}
-                <Form.Item wrapperCol={{offset: 8, span: 16}}>
-                    <Button type="primary" htmlType="submit">Save</Button>
-                </Form.Item>
+                <div style={{ display: 'flex', gap: 12 }}>
+                    {props.onPrevious && <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>}
+                    <Button type="primary" icon={props.nextIcon} htmlType="submit">Save</Button>
+                </div>
             </Form>
         </>);
 }

@@ -1,4 +1,4 @@
-import { Button, Col, Form, Input, Row, Tag, Typography } from "antd";
+import { Button, Form, Input, Tag, Typography } from "antd";
 import React from "react";
 import { Props } from "./SectionProps";
 import { RecipientType } from "./Recipients";
@@ -68,54 +68,48 @@ const Content: React.FC<ContentProps> = (props) => {
 
     return (
         <>
-            <Typography.Title level={2}>Content</Typography.Title>
+            <Typography.Title level={4} className="app-section-title">Content</Typography.Title>
 
             <Form form={contentForm}
-                  labelCol={{span: 8}}
-                  wrapperCol={{span: 16}}
+                  layout="vertical"
                   onFinish={handleFinishContent}
                   initialValues={initialValues}
             >
                 <Form.Item label="Subject" name="subject">
-                    <Input/>
+                    <Input placeholder="Mail subject - use ##firstname## for template variables"/>
                 </Form.Item>
 
-                <Form.Item label="Available template variables">
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                        {availableTemplateVariables.map((variable) => (
-                            <Tag
-                                key={variable}
-                                style={{ cursor: 'pointer', userSelect: 'none' }}
-                                onClick={() => insertTemplateVariable(variable)}
-                            >
-                                {variable}
-                            </Tag>
-                        ))}
+                {availableTemplateVariables.length > 0 && (
+                    <Form.Item label="Available template variables">
+                        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                            Click a tag to insert it at the cursor position.
+                        </Typography.Text>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {availableTemplateVariables.map((variable) => (
+                                <Tag
+                                    key={variable}
+                                    color="blue"
+                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                    onClick={() => insertTemplateVariable(variable)}
+                                >
+                                    {variable}
+                                </Tag>
+                            ))}
+                        </div>
+                    </Form.Item>
+                )}
+
+                <Form.Item label="Mail text">
+                    <Toolbar editor={editor}/>
+                    <div className="editor-surface" style={{ padding: 12, minHeight: 300, marginTop: 8 }}>
+                        <EditorContent editor={editor}/>
                     </div>
                 </Form.Item>
 
-                <Row justify={"end"}>
-                    <Col span={8}>
-                        Mail text:
-                    </Col>
-                    <Col span={16}>
-                        <Toolbar editor={editor}/>
-                        <div
-                            style={{
-                                border: "1px solid #d9d9d9",
-                                borderRadius: 6,
-                                padding: 12,
-                                minHeight: 300,
-                            }}
-                        >
-                            <EditorContent editor={editor}/>
-                        </div>
-                    </Col>
-                </Row>
-
-                <Form.Item wrapperCol={{offset: 8, span: 16}}>
-                    <Button type="primary" htmlType="submit">Save</Button>
-                </Form.Item>
+                <div style={{ display: 'flex', gap: 12 }}>
+                    {props.onPrevious && <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>}
+                    <Button type="primary" icon={props.nextIcon} htmlType="submit">Save &amp; continue</Button>
+                </div>
             </Form>
         </>);
 }

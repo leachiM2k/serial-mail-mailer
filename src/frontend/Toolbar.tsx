@@ -41,7 +41,7 @@ const Toolbar: React.FC<Props> = ({ editor }) => {
 
     return (
         <>
-            <Space wrap style={{ marginBottom: 8, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}>
+            <Space wrap style={{ marginBottom: 8, padding: 8, border: "1px solid var(--app-border)", borderRadius: 10, background: "var(--app-toolbar-bg)" }}>
                 <Tooltip title="Bold">
                     <Button
                         size="small"

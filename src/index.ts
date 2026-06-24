@@ -33,8 +33,11 @@ const setCsp = (): void => {
 const createWindow = (): void => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
-        height: 600,
-        width: 800,
+        height: 820,
+        width: 1180,
+        minHeight: 640,
+        minWidth: 900,
+        title: 'Serien-Mailer',
         webPreferences: {
             preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
             sandbox: false,

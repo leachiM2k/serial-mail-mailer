@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Form, Input, InputRef, Radio, RadioChangeEvent, Table, Typography, Upload, UploadProps } from "antd";
+import { Button, Form, Input, InputRef, Radio, RadioChangeEvent, Space, Table, Typography, Upload, UploadProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { DeleteOutlined, InboxOutlined, PlusOutlined } from "@ant-design/icons";
 import Papa, { ParseResult } from "papaparse";
@@ -77,6 +77,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
             />
         ) : (
             <div
+                className="app-editable-cell"
                 style={{
                     minHeight: 22,
                     cursor: 'pointer',
@@ -84,8 +85,6 @@ const EditableCell: React.FC<EditableCellProps> = ({
                     borderRadius: 4,
                 }}
                 onClick={() => onStartEdit(rowIndex, dataIndex)}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f0f0'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
                 {children}
             </div>
@@ -95,14 +94,20 @@ const EditableCell: React.FC<EditableCellProps> = ({
     return <td {...restProps}>{childNode}</td>;
 };
 
-const Recipients: React.FC<Props> = (props: Props) => {
+type RecipientsProps = Props & {
+    recipients?: RecipientType[];
+}
+
+const Recipients: React.FC<RecipientsProps> = (props: RecipientsProps) => {
     const [recipientsForm] = Form.useForm();
 
     const initialValues = getJsonFromLocalStorage<{ recipients?: string }>('recipients');
     const [csvSourceType, setCsvSourceType] = useState<'file' | 'raw'>(initialValues ? 'raw' : 'file');
 
-    const [dataSource, setDataSource] = useState<RecipientType[]>([]);
-    const [columns, setColumns] = useState<string[]>([]);
+    const [dataSource, setDataSource] = useState<RecipientType[]>(props.recipients ?? []);
+    const [columns, setColumns] = useState<string[]>(
+        props.recipients && props.recipients.length > 0 ? Object.keys(props.recipients[0]) : []
+    );
     const [editingCell, setEditingCell] = useState<{ rowIndex: number; dataIndex: string } | null>(null);
 
     const handleFinishRecipients = (values: { recipients: string }) => {
@@ -226,33 +231,42 @@ const Recipients: React.FC<Props> = (props: Props) => {
     };
 
     return (<>
-        <Typography.Title level={2}>Recipients as CSV file</Typography.Title>
+        <Typography.Title level={4} className="app-section-title">Recipients</Typography.Title>
 
         {dataSource.length === 0 && (<>
-            <Typography.Paragraph>Upload a CSV file or paste the CSV data into the text area below.</Typography.Paragraph>
-            <Typography.Paragraph>The CSV file should be comma-separated and have at least the fields "firstname",
-                "lastname" and "email". All other these and other field can be used in the template.</Typography.Paragraph>
+            <Typography.Paragraph type="secondary">
+                Upload a CSV file or paste the CSV data below. The file should be comma-separated and contain at least
+                the fields <Typography.Text code>firstname</Typography.Text>,
+                <Typography.Text code>lastname</Typography.Text> and
+                <Typography.Text code>email</Typography.Text>. Any additional fields become available as template
+                variables in the next step.
+            </Typography.Paragraph>
             <Form form={recipientsForm} onFinish={handleFinishRecipients}
-                  labelCol={{span: 8}}
-                  wrapperCol={{span: 16}}
+                  layout="vertical"
                   initialValues={initialValues}
             >
                 <Form.Item label="CSV source">
-                    <Radio.Group onChange={(e: RadioChangeEvent) => setCsvSourceType(e.target.value)} value={csvSourceType}>
+                    <Radio.Group
+                        buttonStyle="solid"
+                        onChange={(e: RadioChangeEvent) => setCsvSourceType(e.target.value)}
+                        value={csvSourceType}
+                    >
                         <Radio.Button value="file">CSV file</Radio.Button>
-                        <Radio.Button value="raw">raw text</Radio.Button>
+                        <Radio.Button value="raw">Raw text</Radio.Button>
                     </Radio.Group>
                 </Form.Item>
 
                 {csvSourceType === 'raw' && (
                     <>
                         <Form.Item label="Recipients" name="recipients">
-                            <Input.TextArea rows={20} autoSize={true}/>
+                            <Input.TextArea
+                                rows={20}
+                                autoSize={{ minRows: 10, maxRows: 24 }}
+                                placeholder={'firstname,lastname,email\nJohn,Doe,john@example.com'}
+                            />
                         </Form.Item>
 
-                        <Form.Item wrapperCol={{offset: 8, span: 16}}>
-                            <Button type="primary" htmlType="submit">Parse</Button>
-                        </Form.Item>
+                        <Button type="primary" htmlType="submit">Parse recipients</Button>
                     </>)
                 }
 
@@ -262,8 +276,8 @@ const Recipients: React.FC<Props> = (props: Props) => {
                             <p className="ant-upload-drag-icon">
                                 <InboxOutlined/>
                             </p>
-                            <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                            <p className="ant-upload-hint">Support for a single or bulk upload.</p>
+                            <p className="ant-upload-text">Click or drag a CSV file to this area</p>
+                            <p className="ant-upload-hint">Supports a single CSV file upload.</p>
                         </Upload.Dragger>
                     </Form.Item>
                 }
@@ -271,6 +285,10 @@ const Recipients: React.FC<Props> = (props: Props) => {
         </>)}
 
         {dataSource.length > 0 && <>
+            <Space align="center" style={{ marginBottom: 16 }}>
+                <Typography.Text strong>{dataSource.length} recipients loaded</Typography.Text>
+                <Typography.Text type="secondary">- click a cell to edit, Tab moves between cells.</Typography.Text>
+            </Space>
             <Table
                 dataSource={dataSource}
                 rowKey={(_, index) => index?.toString() || Math.random().toString()}
@@ -282,9 +300,10 @@ const Recipients: React.FC<Props> = (props: Props) => {
             <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <Button icon={<PlusOutlined/>} onClick={handleAdd}>Add row</Button>
                 <Button danger onClick={handleClearAll}>Clear all</Button>
-                <Button type="primary" onClick={() => {
+                {props.onPrevious && <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>}
+                <Button type="primary" icon={props.nextIcon} onClick={() => {
                     props.onFinished({recipients: dataSource});
-                }}>It looks perfect!</Button>
+                }}>Continue</Button>
             </div>
         </>}
     </>);

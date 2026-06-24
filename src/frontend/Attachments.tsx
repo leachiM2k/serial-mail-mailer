@@ -88,16 +88,19 @@ const Attachments: React.FC<AttachmentProps> = (props) => {
 
     return (
         <>
-            <Typography.Title level={2}>Attachments</Typography.Title>
+            <Typography.Title level={4} className="app-section-title">Attachments</Typography.Title>
 
-            <Typography.Paragraph>
-                You can add attachments that will be shared across all recipients, add individual attachments for each
-                recipient, or skip attachments entirely.
+            <Typography.Paragraph type="secondary">
+                You can add attachments shared across all recipients, attach individual files per recipient (via a CSV
+                field), or skip attachments entirely.
             </Typography.Paragraph>
 
             <Form.Item label="Attachment type">
-                <Radio.Group onChange={(e: RadioChangeEvent) => setAttachmentType(e.target.value)}
-                             value={attachmentType}>
+                <Radio.Group
+                    buttonStyle="solid"
+                    onChange={(e: RadioChangeEvent) => setAttachmentType(e.target.value)}
+                    value={attachmentType}
+                >
                     <Radio.Button value="shared">Shared attachments</Radio.Button>
                     <Radio.Button value="individual">Individual attachments</Radio.Button>
                     <Radio.Button value="none">No attachments</Radio.Button>
@@ -110,28 +113,29 @@ const Attachments: React.FC<AttachmentProps> = (props) => {
                         <p className="ant-upload-drag-icon">
                             <InboxOutlined/>
                         </p>
-                        <p className="ant-upload-text">Click or drag file to this area to upload</p>
+                        <p className="ant-upload-text">Click or drag files to this area</p>
                         <p className="ant-upload-hint">
-                            Support for a single or bulk upload. Strictly prohibited from uploading company data or
-                            other
-                            banned files.
+                            Supports multiple files. All files will be attached to every recipient.
                         </p>
                     </Dragger>
 
-                    <Button type="primary" style={{marginTop: 16}}
-                            onClick={() => props.onFinished({attachments: {paths: fileList.map(file => file.path)}})}>Next</Button>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                        {props.onPrevious && <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>}
+                        <Button type="primary" icon={props.nextIcon}
+                                onClick={() => props.onFinished({attachments: {paths: fileList.map(file => file.path)}})}>Next</Button>
+                    </div>
                 </>)
             }
 
             {attachmentType === 'individual' && (
                 <>
                     <Typography.Paragraph>
-                        It is possible to add individual attachment for each recipient.
-                        Please select the field of your data source, that specify that path or URL of the attachments
-                        to be added.
+                        Add an individual attachment for each recipient. Select the field from your data source that
+                        contains the file path or URL of the attachment.
                     </Typography.Paragraph>
-                    <Typography.Paragraph strong={true}>
-                        Attention: Multiple are attachments must be separated by a comma. Therefore a comma is not allowed in the path or URL.
+                    <Typography.Paragraph type="warning">
+                        <strong>Attention:</strong> multiple attachments must be separated by a comma, so commas are not
+                        allowed within a path or URL.
                     </Typography.Paragraph>
                     <Form
                         {...layout}
@@ -151,7 +155,10 @@ const Attachments: React.FC<AttachmentProps> = (props) => {
                             </Select>
                         </Form.Item>
 
-                        <Button type="primary" style={{marginTop: 16}} htmlType="submit">Next</Button>
+                        <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                            {props.onPrevious && <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>}
+                            <Button type="primary" icon={props.nextIcon} htmlType="submit">Next</Button>
+                        </div>
 
                     </Form>
                 </>)
@@ -159,10 +166,13 @@ const Attachments: React.FC<AttachmentProps> = (props) => {
 
             {attachmentType === 'none' && (
                 <>
-                    <Typography.Paragraph>
+                    <Typography.Paragraph type="secondary">
                         No attachments will be added to the emails.
                     </Typography.Paragraph>
-                    <Button type="primary" style={{marginTop: 16}} onClick={handleNone}>Next</Button>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                        {props.onPrevious && <Button icon={props.prevIcon} onClick={props.onPrevious}>Previous</Button>}
+                        <Button type="primary" icon={props.nextIcon} onClick={handleNone}>Next</Button>
+                    </div>
                 </>)
             }
         </>);
