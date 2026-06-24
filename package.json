@@ -34,7 +34,6 @@
     "@typescript-eslint/eslint-plugin": "^8.62.0",
     "@typescript-eslint/parser": "^8.62.0",
     "@vercel/webpack-asset-relocator-loader": "1.10.0",
-    "appdmg": "^0.6.6",
     "css-loader": "^7.1.4",
     "electron": "^42.5.0",
     "eslint": "^9.36.0",
@@ -64,5 +63,8 @@
     "papaparse": "^5.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
+  },
+  "optionalDependencies": {
+    "appdmg": "^0.6.6"
   }
 }
