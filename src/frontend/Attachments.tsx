@@ -3,18 +3,12 @@ import { InboxOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { Props } from "./SectionProps";
 import { RecipientType } from "./Recipients";
-import { AttachmentIndividualType, AttachmentSharedType, isAttachmentShared } from "./ValuesProps";
+import { AttachmentIndividualType, AttachmentNoneType, AttachmentSharedType, isAttachmentShared } from "./ValuesProps";
+import { getJsonFromLocalStorage } from "../shared/storage";
+import { useRecipients } from "../shared/useRecipients";
 
 const {Option} = Select;
 const {Dragger} = Upload;
-
-const getJsonFromLocalStorage = (key: string) => {
-    const item = localStorage.getItem(key);
-    if (item) {
-        return JSON.parse(item);
-    }
-    return undefined;
-}
 
 const layout = {
     labelCol: {span: 8},
@@ -22,22 +16,36 @@ const layout = {
 };
 
 type AttachmentProps = Props & {
-    recipients: RecipientType[];
+    recipients?: RecipientType[];
 }
 
-const Attachments: React.FC<Props> = (props: AttachmentProps) => {
-    const storedAttachments: AttachmentSharedType | AttachmentIndividualType = getJsonFromLocalStorage('attachments');
+type AttachmentType = 'shared' | 'individual' | 'none';
 
-    const saveAttachments = (value: AttachmentSharedType | AttachmentIndividualType) => {
+const detectStoredType = (storedAttachments: unknown): AttachmentType => {
+    if (!storedAttachments || typeof storedAttachments !== 'object') return 'none';
+    if (Array.isArray((storedAttachments as Record<string, unknown>).paths)) return 'shared';
+    if ('fieldname' in (storedAttachments as Record<string, unknown>)) return 'individual';
+    return 'none';
+}
+
+const Attachments: React.FC<AttachmentProps> = (props) => {
+    const storedAttachments = getJsonFromLocalStorage<AttachmentSharedType | AttachmentIndividualType | AttachmentNoneType>('attachments');
+
+    const saveAttachments = (value: AttachmentSharedType | AttachmentIndividualType | AttachmentNoneType) => {
         localStorage.setItem('attachments', JSON.stringify(value));
     }
 
-    const [attachmentType, setAttachmentType] = useState<'shared' | 'individual'>(isAttachmentShared(storedAttachments) ? 'shared' : 'individual');
+    const [attachmentType, setAttachmentType] = useState<AttachmentType>(detectStoredType(storedAttachments));
+    const recipients = useRecipients(props.recipients);
     const [availableTemplateVariables] = React.useState<string[]>(
-        Object.keys((props.recipients || [])[0])
+        recipients.length > 0 ? Object.keys(recipients[0]) : []
     );
 
-    const [fileList, setFileList] = React.useState<any[]>(isAttachmentShared(storedAttachments) ? storedAttachments.paths : []);
+    const [fileList, setFileList] = React.useState<{ uid: string; name: string; path: string }[]>(
+        isAttachmentShared(storedAttachments)
+            ? storedAttachments.paths.map(p => ({ uid: p, name: p.split(/[/\\]/).pop() || p, path: p }))
+            : []
+    );
     const [form] = Form.useForm();
 
     const uploadProps: UploadProps = {
@@ -45,21 +53,22 @@ const Attachments: React.FC<Props> = (props: AttachmentProps) => {
         multiple: true,
         defaultFileList: fileList,
         beforeUpload: (file) => {
+            const filePath = (file as unknown as File & { path: string }).path;
             const f = {
                 uid: file.uid,
                 name: file.name,
-                path: file.path,
+                path: filePath,
             };
             setFileList((prev) => {
                 const newFileList = [...prev, f];
-                saveAttachments({paths: newFileList});
+                saveAttachments({paths: newFileList.map(file => file.path)});
                 return newFileList;
             });
             return false;
         },
         onRemove: (file) => {
             const newFileList = fileList.filter(f => f.uid !== file.uid);
-            saveAttachments({paths: newFileList});
+            saveAttachments({paths: newFileList.map(file => file.path)});
             setFileList(newFileList);
             return true;
         }
@@ -71,16 +80,19 @@ const Attachments: React.FC<Props> = (props: AttachmentProps) => {
         props.onFinished({attachments});
     };
 
+    const handleNone = () => {
+        const attachments: AttachmentNoneType = { type: 'none' };
+        saveAttachments(attachments);
+        props.onFinished({attachments});
+    };
+
     return (
         <>
             <Typography.Title level={2}>Attachments</Typography.Title>
 
             <Typography.Paragraph>
-                You can add attachments that will be shared across all recipients or add individual attachments for each
-                recipient. Shared attachments will be included in every email sent, while individual attachments allow
-                you to customize the attachments for each recipient. To add shared attachments, select the "Shared
-                attachments" option and upload your files. To add individual attachments, select the "Individual
-                attachments" option.
+                You can add attachments that will be shared across all recipients, add individual attachments for each
+                recipient, or skip attachments entirely.
             </Typography.Paragraph>
 
             <Form.Item label="Attachment type">
@@ -88,6 +100,7 @@ const Attachments: React.FC<Props> = (props: AttachmentProps) => {
                              value={attachmentType}>
                     <Radio.Button value="shared">Shared attachments</Radio.Button>
                     <Radio.Button value="individual">Individual attachments</Radio.Button>
+                    <Radio.Button value="none">No attachments</Radio.Button>
                 </Radio.Group>
             </Form.Item>
 
@@ -112,38 +125,44 @@ const Attachments: React.FC<Props> = (props: AttachmentProps) => {
 
             {attachmentType === 'individual' && (
                 <>
-                    <>
-                        <Typography.Paragraph>
-                            It is possible to add individual attachment for each recipient.
-                            Please select the field of your data source, that specify that path or URL of the attachments
-                            to be added.
-                        </Typography.Paragraph>
-                        <Typography.Paragraph strong={true}>
-                            Attention: Multiple are attachments must be separated by a comma. Therefore a comma is not allowed in the path or URL.
-                        </Typography.Paragraph>
-                        <Form
-                            {...layout}
-                            form={form}
-                            name="connection"
-                            initialValues={isAttachmentShared(storedAttachments) ? {} : {attachmentsField: storedAttachments.fieldname}}
-                            style={{maxWidth: 600}}
-                            onFinish={handleFinish}
-                        >
-                            <Form.Item label="Attachments" name="attachmentsField">
-                                <Select
-                                    placeholder="Field in your data source for the attachments"
-                                    allowClear
-                                >
-                                    {availableTemplateVariables.map((field: string) => (
-                                        <Option value={field} key={field}>{field}</Option>))}
-                                </Select>
-                            </Form.Item>
+                    <Typography.Paragraph>
+                        It is possible to add individual attachment for each recipient.
+                        Please select the field of your data source, that specify that path or URL of the attachments
+                        to be added.
+                    </Typography.Paragraph>
+                    <Typography.Paragraph strong={true}>
+                        Attention: Multiple are attachments must be separated by a comma. Therefore a comma is not allowed in the path or URL.
+                    </Typography.Paragraph>
+                    <Form
+                        {...layout}
+                        form={form}
+                        name="connection"
+                        initialValues={isAttachmentShared(storedAttachments) || !storedAttachments ? {} : {attachmentsField: (storedAttachments as AttachmentIndividualType).fieldname}}
+                        style={{maxWidth: 600}}
+                        onFinish={handleFinish}
+                    >
+                        <Form.Item label="Attachments" name="attachmentsField">
+                            <Select
+                                placeholder="Field in your data source for the attachments"
+                                allowClear
+                            >
+                                {availableTemplateVariables.map((field: string) => (
+                                    <Option value={field} key={field}>{field}</Option>))}
+                            </Select>
+                        </Form.Item>
 
-                            <Button type="primary" style={{marginTop: 16}} htmlType="submit">Next</Button>
+                        <Button type="primary" style={{marginTop: 16}} htmlType="submit">Next</Button>
 
-                        </Form>
-                    </>
+                    </Form>
+                </>)
+            }
 
+            {attachmentType === 'none' && (
+                <>
+                    <Typography.Paragraph>
+                        No attachments will be added to the emails.
+                    </Typography.Paragraph>
+                    <Button type="primary" style={{marginTop: 16}} onClick={handleNone}>Next</Button>
                 </>)
             }
         </>);

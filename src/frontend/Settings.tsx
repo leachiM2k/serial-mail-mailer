@@ -14,24 +14,40 @@ export type SettingsType = {
     smtpPassword: string;
 }
 
-const getJsonFromLocalStorage = (key: string) => {
-    const item = localStorage.getItem(key);
-    if (item) {
-        return JSON.parse(item);
-    }
-    return undefined;
-}
-
 const Settings: React.FC<Props> = (props: Props) => {
     const [settingsForm] = Form.useForm<SettingsType>();
+    const [loading, setLoading] = React.useState(true);
+    const [initialValues, setInitialValues] = React.useState<SettingsType | undefined>(undefined);
 
-    const initialValues = getJsonFromLocalStorage('settings');
+    React.useEffect(() => {
+        const loadSettings = async () => {
+            const response = await window.IpcService.send<{ success: boolean; settings?: SettingsType }>(
+                'settings-storage',
+                { params: { action: 'load' } }
+            );
+            if (response?.success && response.settings) {
+                setInitialValues(response.settings);
+                settingsForm.setFieldsValue(response.settings);
+                setTransport(response.settings.transport || 'smtp');
+            }
+            setLoading(false);
+        };
+        loadSettings();
+    }, []);
 
-    const [transport, setTransport] = React.useState<'smtp' | 'gmail'>(initialValues.transport || 'smtp');
+    const [transport, setTransport] = React.useState<'smtp' | 'gmail'>(initialValues?.transport || 'smtp');
 
-    const handleFinishSettings = (values: SettingsType) => {
-        localStorage.setItem('settings', JSON.stringify(values));
-        props.onFinished({settings: values});
+    const handleFinishSettings = async (values: SettingsType) => {
+        const response = await window.IpcService.send<{ success: boolean }>('settings-storage', {
+            params: { action: 'save', settings: values }
+        });
+        if (response?.success) {
+            props.onFinished({settings: values});
+        }
+    }
+
+    if (loading) {
+        return <Typography.Text>Loading settings...</Typography.Text>;
     }
 
     return (

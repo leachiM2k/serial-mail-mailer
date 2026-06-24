@@ -4,7 +4,7 @@ import { SettingsType } from "./Settings";
 export type ValuesProps = {
     recipients?: RecipientType[];
     content?: ContentType;
-    attachments?: AttachmentSharedType | AttachmentIndividualType;
+    attachments?: AttachmentSharedType | AttachmentIndividualType | AttachmentNoneType;
     settings?: SettingsType;
 }
 
@@ -22,7 +22,15 @@ export type AttachmentIndividualType = {
     fieldname: string;
 }
 
+export type AttachmentNoneType = {
+    type: 'none';
+}
 
-export const isAttachmentShared = (obj: any): obj is AttachmentSharedType => {
-    return obj && Array.isArray(obj.paths);
+
+export const isAttachmentShared = (obj: unknown): obj is AttachmentSharedType => {
+    return !!obj && typeof obj === 'object' && Array.isArray((obj as Record<string, unknown>).paths);
+}
+
+export const isAttachmentNone = (obj: unknown): obj is AttachmentNoneType => {
+    return !!obj && typeof obj === 'object' && (obj as Record<string, unknown>).type === 'none';
 }

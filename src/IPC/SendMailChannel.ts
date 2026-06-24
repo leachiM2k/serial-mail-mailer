@@ -1,11 +1,15 @@
 import { IpcChannelInterface } from "./IpcChannelInterface";
 import { IpcMainEvent } from 'electron';
 import { IpcRequest } from "../shared/IpcRequest";
-import nodemailer from "nodemailer";
+import nodemailer, { Transporter } from "nodemailer";
 import { SettingsType } from "../frontend/Settings";
 import { MailMessageType } from "../shared/MailMessageType";
+import { SettingsStorage } from "./SettingsStorage";
 
 export class SendMailChannel implements IpcChannelInterface {
+    private cachedTransporter: Transporter | null = null;
+    private cachedSettingsKey: string | null = null;
+
     getName(): string {
         return 'send-mail';
     }
@@ -15,29 +19,71 @@ export class SendMailChannel implements IpcChannelInterface {
             request.responseChannel = `${this.getName()}_response`;
         }
 
-        const settings = request.params.settings as SettingsType;
-        const message = request.params.message as MailMessageType;
+        const responseChannel = request.responseChannel;
+        const message = request.params!.message as MailMessageType;
 
-        const transporter = this.buildTransporter(settings.transport, settings);
+        try {
+            const settings = SettingsStorage.load();
+            if (!settings) {
+                throw new Error('No settings found. Please configure settings first.');
+            }
 
-        transporter.sendMail(message, (error, info) => {
-            transporter.close();
-            console.log('***** [SendMailChannel:37] ********************** ', {error, info});
-            event.sender.send(request.responseChannel, {success: !error});
-        });
+            const transporter = this.getTransporter(settings);
+
+            transporter.sendMail(message, (error) => {
+                if (error) {
+                    event.sender.send(responseChannel, {
+                        success: false,
+                        error: error.message,
+                    });
+                } else {
+                    event.sender.send(responseChannel, { success: true });
+                }
+            });
+        } catch (error) {
+            event.sender.send(responseChannel, {
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
     }
 
-    private buildTransporter(transport: "smtp" | "gmail", settings: SettingsType) {
+    private getTransporter(settings: SettingsType): Transporter {
+        const key = JSON.stringify({
+            transport: settings.transport,
+            smtpServer: settings.smtpServer,
+            smtpPort: settings.smtpPort,
+            smtpUser: settings.smtpUser,
+            gmailUser: settings.gmailUser,
+        });
+
+        if (this.cachedTransporter && this.cachedSettingsKey === key) {
+            return this.cachedTransporter;
+        }
+
+        if (this.cachedTransporter) {
+            this.cachedTransporter.close();
+        }
+
+        const transporter = this.buildTransporter(settings.transport, settings);
+        if (!transporter) {
+            throw new Error(`Unknown transport type: ${settings.transport}`);
+        }
+
+        this.cachedTransporter = transporter;
+        this.cachedSettingsKey = key;
+        return transporter;
+    }
+
+    private buildTransporter(transport: "smtp" | "gmail", settings: SettingsType): Transporter | null {
         if (transport === "smtp") {
             return nodemailer.createTransport({
                 host: settings.smtpServer,
                 port: parseInt(settings.smtpPort),
                 tls: {
                     ciphers: 'SSLv3',
-                    rejectUnauthorized: false
+                    rejectUnauthorized: true
                 },
-                debug: true,
-                logger: true,
                 auth: {
                     user: settings.smtpUser,
                     pass: settings.smtpPassword
@@ -52,5 +98,6 @@ export class SendMailChannel implements IpcChannelInterface {
                 }
             });
         }
+        return null;
     }
 }

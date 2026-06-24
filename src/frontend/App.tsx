@@ -26,7 +26,7 @@ const steps = [
     },
     {
         title: 'Confirmation & Send',
-        isDisabled: (allValues: any) => !allValues.settings || !allValues.attachments || !allValues.content || !allValues.recipients,
+        isDisabled: (allValues: ValuesProps) => !allValues.settings || !allValues.attachments || !allValues.content || !allValues.recipients,
     }
 ];
 const App = () => {
@@ -35,10 +35,6 @@ const App = () => {
 
     const next = () => {
         setCurrent(current + 1);
-    };
-
-    const prev = () => {
-        setCurrent(current - 1);
     };
 
     const items = steps
@@ -60,9 +56,9 @@ const App = () => {
         const C = steps[current].content;
         if(!C) return (<Confirmation
             recipients={allValues.recipients}
-            content={allValues.content}
-            attachments={allValues.attachments}
-            settings={allValues.settings}
+            content={allValues.content!}
+            attachments={allValues.attachments!}
+            settings={allValues.settings!}
         />);
         return <C {...allValues} onFinished={(values) => {
             setAllValues({...allValues, ...values});

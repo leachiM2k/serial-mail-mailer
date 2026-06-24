@@ -1,48 +1,74 @@
 import { Button, Col, Form, Input, Row, Tag, Typography } from "antd";
-import React, { useRef } from "react";
+import React from "react";
 import { Props } from "./SectionProps";
 import { RecipientType } from "./Recipients";
-import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
-import viewToPlainText from '@ckeditor/ckeditor5-clipboard/src/utils/viewtoplaintext';
-
-const getJsonFromLocalStorage = (key: string) => {
-    const item = localStorage.getItem(key);
-    if (item) {
-        return JSON.parse(item);
-    }
-    return undefined;
-}
-
+import { useEditor, EditorContent } from "@tiptap/react";
+import { StarterKit } from "@tiptap/starter-kit";
+import { Link } from "@tiptap/extension-link";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { Highlight } from "@tiptap/extension-highlight";
+import { htmlToPlainText } from "../shared/htmlToPlainText";
+import { getJsonFromLocalStorage } from "../shared/storage";
+import { useRecipients } from "../shared/useRecipients";
+import Toolbar from "./Toolbar";
 
 type ContentProps = Props & {
-    recipients: RecipientType[];
+    recipients?: RecipientType[];
 }
 
-const Content: React.FC<Props> = (props: ContentProps) => {
+const Content: React.FC<ContentProps> = (props) => {
     const [contentForm] = Form.useForm();
-    const ckeditor = useRef<ClassicEditor>();
-    const [availableTemplateVariables, setAvailableTemplateVariables] = React.useState<string[]>(
-        Object.keys((props.recipients || [])[0])
+
+    const recipients = useRecipients(props.recipients);
+
+    const [availableTemplateVariables] = React.useState<string[]>(
+        recipients.length > 0 ? Object.keys(recipients[0]) : []
     );
 
-    const initialValues = getJsonFromLocalStorage('content');
+    const initialValues = getJsonFromLocalStorage<{ subject?: string; body?: string; htmlBody?: string }>('content');
 
-    const handleFinishContent = (values: any) => {
-        const plainText = viewToPlainText(ckeditor.current.editing.view.document.getRoot());
-        const htmlBody = ckeditor.current.getData();
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            Link.configure({
+                openOnClick: false,
+                autolink: false,
+                HTMLAttributes: {
+                    style: 'cursor: text;',
+                },
+            }),
+            TextStyle,
+            Color,
+            Highlight,
+        ],
+        content: initialValues?.htmlBody || '',
+        immediatelyRender: false,
+    });
 
-        values.body = plainText;
-        values.htmlBody = htmlBody;
+    const insertTemplateVariable = (variable: string) => {
+        if (!editor) return;
+        editor.chain().focus().insertContent(`##${variable}##`).run();
+    };
 
-        localStorage.setItem('content', JSON.stringify(values));
-        props.onFinished({content: values});
+    const handleFinishContent = (values: { subject?: string }) => {
+        if (!editor) return;
+        const htmlBody = editor.getHTML();
+        const plainText = htmlToPlainText(htmlBody);
+
+        const content = {
+            subject: values.subject || '',
+            body: plainText,
+            htmlBody,
+        };
+
+        localStorage.setItem('content', JSON.stringify(content));
+        props.onFinished({content});
     };
 
     return (
         <>
             <Typography.Title level={2}>Content</Typography.Title>
-
 
             <Form form={contentForm}
                   labelCol={{span: 8}}
@@ -55,7 +81,17 @@ const Content: React.FC<Props> = (props: ContentProps) => {
                 </Form.Item>
 
                 <Form.Item label="Available template variables">
-                    {availableTemplateVariables.map((variable, index) => <Tag key={index}>{variable}</Tag>)}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {availableTemplateVariables.map((variable) => (
+                            <Tag
+                                key={variable}
+                                style={{ cursor: 'pointer', userSelect: 'none' }}
+                                onClick={() => insertTemplateVariable(variable)}
+                            >
+                                {variable}
+                            </Tag>
+                        ))}
+                    </div>
                 </Form.Item>
 
                 <Row justify={"end"}>
@@ -63,13 +99,17 @@ const Content: React.FC<Props> = (props: ContentProps) => {
                         Mail text:
                     </Col>
                     <Col span={16}>
-                        <CKEditor
-                            editor={ClassicEditor}
-                            data={initialValues.htmlBody || ''}
-                            onReady={editor => {
-                                ckeditor.current = editor;
+                        <Toolbar editor={editor}/>
+                        <div
+                            style={{
+                                border: "1px solid #d9d9d9",
+                                borderRadius: 6,
+                                padding: 12,
+                                minHeight: 300,
                             }}
-                        />
+                        >
+                            <EditorContent editor={editor}/>
+                        </div>
                     </Col>
                 </Row>
 

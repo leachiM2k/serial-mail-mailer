@@ -1,7 +1,7 @@
-import {IpcChannelInterface} from "./IpcChannelInterface";
-import {IpcMainEvent} from 'electron';
-import {IpcRequest} from "../shared/IpcRequest";
-import {execSync} from "child_process";
+import { IpcChannelInterface } from "./IpcChannelInterface";
+import { IpcMainEvent } from 'electron';
+import { IpcRequest } from "../shared/IpcRequest";
+import os from "os";
 
 export class SystemInfoChannel implements IpcChannelInterface {
     getName(): string {
@@ -12,6 +12,12 @@ export class SystemInfoChannel implements IpcChannelInterface {
         if (!request.responseChannel) {
             request.responseChannel = `${this.getName()}_response`;
         }
-        event.sender.send(request.responseChannel, { kernel: execSync('uname -a').toString() });
+        event.sender.send(request.responseChannel, {
+            platform: os.platform(),
+            arch: os.arch(),
+            hostname: os.hostname(),
+            kernel: os.release(),
+            uptime: os.uptime(),
+        });
     }
 }

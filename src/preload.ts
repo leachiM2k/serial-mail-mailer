@@ -9,8 +9,19 @@ declare global {
     interface Window { IpcService: IpcService; }
 }
 
+const ALLOWED_CHANNELS = ['send-mail', 'system-info', 'settings-storage'] as const;
+type AllowedChannel = typeof ALLOWED_CHANNELS[number];
+
+const isValidChannel = (channel: string): channel is AllowedChannel =>
+    (ALLOWED_CHANNELS as readonly string[]).includes(channel);
+
 const ipcService = new IpcService(ipcRenderer);
 
 contextBridge.exposeInMainWorld('IpcService', {
-    send: (channel: string, request?: IpcRequest) => ipcService.send(channel, request)
+    send: (channel: string, request?: IpcRequest) => {
+        if (!isValidChannel(channel)) {
+            throw new Error(`IPC channel "${channel}" is not allowed`);
+        }
+        return ipcService.send(channel, request);
+    }
 });

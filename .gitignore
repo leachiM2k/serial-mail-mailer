@@ -90,3 +90,8 @@ typings/
 
 # Electron-Forge
 out/
+
+# Sensitive data — never commit
+*.csv
+gmail-app-password.txt
+*-password.txt
